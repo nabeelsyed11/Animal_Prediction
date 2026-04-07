@@ -1,9 +1,13 @@
 import os, zipfile
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_ZIP_PATH = os.path.join(BASE_DIR, "cifar10_model.zip")
+MODEL_H5_PATH = os.path.join(BASE_DIR, "cifar10_model.h5")
+
 # Unzip the model if .h5 file is not already extracted
-if not os.path.exists("cifar10_model.h5") and os.path.exists("cifar10_model.zip"):
-    with zipfile.ZipFile("cifar10_model.zip", 'r') as zip_ref:
-        zip_ref.extractall(".")
+if not os.path.exists(MODEL_H5_PATH) and os.path.exists(MODEL_ZIP_PATH):
+    with zipfile.ZipFile(MODEL_ZIP_PATH, 'r') as zip_ref:
+        zip_ref.extractall(BASE_DIR)
         
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # Suppress TensorFlow warnings
 import tensorflow as tf
@@ -24,8 +28,8 @@ CLASS_NAMES = [
 # Load or train model
 @st.cache_resource
 def load_model():
-    if os.path.exists("cifar10_model.h5"):
-        model = tf.keras.models.load_model("cifar10_model.h5")
+    if os.path.exists(MODEL_H5_PATH):
+        model = tf.keras.models.load_model(MODEL_H5_PATH)
     else:
         st.warning("⚠️ Model not found! Training a new model (this may take 1-2 mins)...")
 
@@ -62,11 +66,11 @@ def load_model():
         
         # Train with fewer epochs for quick demo
         model.fit(x_train, y_train, validation_data=(x_test, y_test), epochs=5, batch_size=64)
-        model.save("cifar10_model.h5")
+        model.save(MODEL_H5_PATH)
 
     return model
 
-model = tf.keras.models.load_model("cifar10_model.h5")
+model = tf.keras.models.load_model(MODEL_H5_PATH)
 
 
 # Custom CSS for a modern, attractive UI

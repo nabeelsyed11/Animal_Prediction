@@ -8,11 +8,13 @@ if not os.path.exists("cifar10_model.h5") and os.path.exists("cifar10_model.zip"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # Suppress TensorFlow warnings
 import tensorflow as tf
 import streamlit as st
+
+st.set_page_config(page_title="CIFAR-10 Classifier", page_icon="🐾", layout="wide")
+
 import tensorflow as tf
 import numpy as np
 from PIL import Image
 import os
-
 # CIFAR-10 Classes
 CLASS_NAMES = [
     "airplane", "automobile", "bird", "cat", "deer",
@@ -67,30 +69,106 @@ def load_model():
 model = tf.keras.models.load_model("cifar10_model.h5")
 
 
-# Streamlit UI
-st.title("🚀 CIFAR-10 Image Classifier")
-st.write("Upload an image and let the model predict its class!")
+# Custom CSS for a modern, attractive UI
+st.markdown("""
+    <style>
+    /* Main background */
+    .stApp {
+        background-color: #0e1117;
+        color: #fafafa;
+    }
+    
+    /* Headers */
+    h1, h2, h3 {
+        color: #4CAF50 !important;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    /* Card styling for columns */
+    div[data-testid="stVerticalBlock"] > div {
+        background-color: #1e2127;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* File uploader styling */
+    .stFileUploader {
+        border: 2px dashed #4CAF50;
+        border-radius: 10px;
+        background-color: #262930 !important;
+        padding: 20px;
+        transition: 0.3s;
+    }
+    .stFileUploader:hover {
+        border-color: #45a049;
+        background-color: #2d313a !important;
+    }
+    
+    /* Image caption */
+    .stImage caption {
+        font-size: 1.1rem;
+        color: #a0aab5;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-uploaded_file = st.file_uploader("📂 Upload an Image", type=["jpg", "jpeg", "png"])
+# Application Header
+st.title("🐾 CIFAR-10 Image Classifier")
+st.markdown(
+    "Upload an image of one of the categories below, and our **Deep Learning Model** will classify it instantly! "
+    "*(Categories: Airplane, Automobile, Bird, Cat, Deer, Dog, Frog, Horse, Ship, Truck)*"
+)
+st.write("---")
 
-if uploaded_file is not None:
-    image = Image.open(uploaded_file).resize((32, 32))
-    st.image(image, caption="Uploaded Image", use_container_width=True)
+# Main Layout
+col1, col2 = st.columns([1, 1], gap="large")
 
-    img_array = np.array(image) / 255.0
-    img_array = np.expand_dims(img_array, axis=0)
+with col1:
+    st.subheader("📂 Upload an Image")
+    uploaded_file = st.file_uploader("Choose a JPG or PNG image...", type=["jpg", "jpeg", "png"])
+    
+    if uploaded_file is not None:
+        # Load and display original user image
+        image = Image.open(uploaded_file)
+        # Convert RGBA to RGB if needed to avoid shape issues
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+        
+        st.image(image, caption="📸 Your Image", use_container_width=True)
 
-    prediction = model.predict(img_array)
-    class_index = np.argmax(prediction)
-    confidence = np.max(prediction)
-
-    st.subheader(f"✅ Prediction: {CLASS_NAMES[class_index]}")
-    st.write(f"**Confidence:** {confidence*100:.2f}%")
-
-    # Show top-3 predictions
-    top_indices = prediction[0].argsort()[-3:][::-1]
-    st.write("### 🔎 Top 3 Predictions")
-    for i in top_indices:
-        st.write(f"- {CLASS_NAMES[i]} ({prediction[0][i]*100:.2f}%)")
-
-
+with col2:
+    if uploaded_file is not None:
+        st.subheader("🤖 Model Analysis")
+        
+        with st.spinner("Analyzing image..."):
+            # Prepare image for the model (32x32 size for CIFAR-10)
+            img_resized = image.resize((32, 32))
+            img_array = np.array(img_resized) / 255.0
+            img_array = np.expand_dims(img_array, axis=0)
+            
+            # Predict
+            prediction = model.predict(img_array)
+            class_index = np.argmax(prediction)
+            confidence = np.max(prediction)
+            
+            # Results
+            st.success(f"### 🎉 Prediction: **{CLASS_NAMES[class_index].capitalize()}**")
+            st.info(f"**Confidence Score:** {confidence * 100:.1f}%")
+            
+            st.write("---")
+            st.write("### 🔎 Top 3 Predictions")
+            
+            # Show top 3 predictions with progress bars
+            top_indices = prediction[0].argsort()[-3:][::-1]
+            for i in top_indices:
+                class_name = CLASS_NAMES[i].capitalize()
+                pred_prob = float(prediction[0][i])
+                
+                # Format progress bar color based on confidence
+                st.write(f"**{class_name}** - {pred_prob * 100:.1f}%")
+                st.progress(pred_prob)
+    else:
+        st.info("👈 Please upload an image on the left to see the classification results.")
+        st.image("https://images.unsplash.com/photo-1549692520-acc6669e2f0c?q=80&w=600&auto=format&fit=crop", 
+                 caption="Waiting for your input...", use_container_width=True)
